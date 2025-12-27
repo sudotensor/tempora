@@ -1,0 +1,32 @@
+[project]
+name = "tempora"
+version = "0.1.0"
+description = "Characterising the time-contingent utility of fully online test-time adaptation"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.0",
+    "timm>=1.0.22",
+    "torch>=2.9.1",
+    "torchvision>=0.24.1",
+]
+
+[dependency-groups]
+dev = [
+    "ipdb>=0.13.13",
+    "ruff>=0.14.10",
+]
+
+[tool.uv]
+required-environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",   # Development machine
+    "sys_platform == 'linux' and platform_machine == 'aarch64'",  # Raspberry Pi
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
