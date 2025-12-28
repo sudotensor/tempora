@@ -9,3 +9,7 @@ Current evaluations of test-time adaptation (TTA) methods often overlook the acc
 ## Datasets
 
 CIFAR-10/100 and ImageNet dataloaders with support for CIFAR-C and ImageNet-C corruptions (15 types, 5 severity levels). ImageNet validation data requires preprocessing with `valprep.sh` to organize images into class-wise folders.
+
+## Models
+
+ResNet-18, ResNet-50, MobileNet-V2, and MobileNet-V3-Small architectures with CIFAR-10/100 and ImageNet support. Models are patched to optionally return intermediate features for test-time adaptation. Pre-trained ImageNet-1K weights available; CIFAR models require custom checkpoints.
