@@ -13,3 +13,7 @@ CIFAR-10/100 and ImageNet dataloaders with support for CIFAR-C and ImageNet-C co
 ## Models
 
 ResNet-18, ResNet-50, MobileNet-V2, and MobileNet-V3-Small architectures with CIFAR-10/100 and ImageNet support. Models are patched to optionally return intermediate features for test-time adaptation. Pre-trained ImageNet-1K weights available; CIFAR models require custom checkpoints.
+
+## Methods
+
+Eight fully test-time adaptation methods that implement a unified API: AdaBN, PredBN, NEO, LAME, Tent, ETA, SHOT, and SAR. All methods were updated to support frozen inference where the forward pass is completely static.
