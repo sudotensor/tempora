@@ -1,3 +1,4 @@
+from ..utils import stopwatch
 from .base import Method
 
 
@@ -7,8 +8,8 @@ class Basic(Method):
         super().__init__()
         self.model = self._configure_model(model)
 
-    def forward(self, x):
-        return self.model(x).softmax(1)
+    def forward(self, x, device):
+        return stopwatch(device, lambda: self.model(x).softmax(1))
 
     def reset(self):
         pass

@@ -4,16 +4,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from ..utils import stopwatch
 from .base import Method
 from .utils import get_cpu_snapshot
 
 
 # Source: https://github.com/mr-eggplant/EATA
 # Paper : https://arxiv.org/abs/2204.02610
-# Note  : This version implements ETA (the variant of EATA without anti-forgetting regularisation) and differs from the 
-#         original in three ways (similar to tent.py): (1) it tracks running stats. to enable frozen inference, (2) it
-#         drops batch-wise episodic resetting and multi-step gradient updates, and (3) it allows prediction after 
-#         adaptation via reforward. It's identical to the original during adaptation (for predict-then-adapt).
+# Note  : This version implements ETA (the variant of EATA without anti-forgetting regularisation) and largely follows
+#         the code structure found in tent.py. The momentum parameter is only for BN layers.
 class ETA(Method):
     def __init__(self, model, optimizer, reforward=False, momentum=0.1, e_threshold=0.4 * log(1000), d_threshold=0.05):
         super().__init__()
@@ -35,62 +34,70 @@ class ETA(Method):
 
         self._check_model(self.model)
 
-    def forward(self, x):
-        if self.frozen:
-            with torch.no_grad():
-                return self.model(x).softmax(1)
+    def forward(self, x, device):
+        def _forward():
+            outputs, prediction_time = None, 0.0
 
-        outputs = None
-        with torch.enable_grad():
-            outputs = self.model(x)
-            entropy = -(outputs.softmax(1) * outputs.log_softmax(1)).sum(1)  # Conditional entropy
+            with torch.enable_grad():
+                outputs, prediction_time = stopwatch(device, lambda: self.model(x))
+                entropy = -(outputs.softmax(1) * outputs.log_softmax(1)).sum(1)  # Conditional entropy
 
-            # 1. Reliability filter: Keep low-entropy (confident) predictions
-            mask = entropy < self.e_threshold
-            if not mask.any():
-                self.optimizer.zero_grad()
-                return outputs.softmax(1)
-
-            entropy_filtered = entropy[mask]
-            outputs_filtered = outputs[mask]
-            self.num_reliable_samples += entropy_filtered.size(0)
-
-            # 2. Redundancy filter: Keep predictions dissimilar from the moving mean
-            mask = torch.ones_like(entropy_filtered, dtype=torch.bool)
-            if self.mm_probs is None:
-                with torch.no_grad():
-                    self.mm_probs = outputs_filtered.softmax(1).mean(0)
-            else:
-                cos_sims = F.cosine_similarity(self.mm_probs.unsqueeze(0), outputs_filtered.softmax(1), dim=1)
-                mask = cos_sims.abs() < self.d_threshold
-
+                # 1. Reliability filter: Keep low-entropy, confident samples
+                mask = entropy < self.e_threshold
                 if not mask.any():
                     self.optimizer.zero_grad()
-                    return outputs.softmax(1)
+                    return outputs.softmax(1), prediction_time
 
-                entropy_filtered = entropy_filtered[mask]
-                outputs_filtered = outputs_filtered[mask]
+                entropy_filtered = entropy[mask]
+                outputs_filtered = outputs[mask]
+                self.num_reliable_samples += entropy_filtered.size(0)
 
-                with torch.no_grad():
-                    self.mm_probs = 0.1 * outputs_filtered.softmax(1).mean(0) + 0.9 * self.mm_probs
+                # 2. Redundancy filter: Keep samples dissimilar from the moving mean
+                mask = torch.ones_like(entropy_filtered, dtype=torch.bool)
+                if self.mm_probs is None:
+                    with torch.no_grad():
+                        self.mm_probs = outputs_filtered.softmax(1).mean(0)
+                else:
+                    cos_sims = F.cosine_similarity(self.mm_probs.unsqueeze(0), outputs_filtered.softmax(1), dim=1)
+                    mask = cos_sims.abs() < self.d_threshold
 
-            self.num_required_samples += entropy_filtered.size(0)
+                    if not mask.any():
+                        self.optimizer.zero_grad()
+                        return outputs.softmax(1), prediction_time
 
-            # 3. Compute weighted entropy loss
-            weight = torch.exp(self.e_threshold - entropy_filtered.detach()).requires_grad_(False)
-            loss = (entropy_filtered * weight).mean(0)
-            loss.backward()
+                    entropy_filtered = entropy_filtered[mask]
+                    outputs_filtered = outputs_filtered[mask]
 
-            self.optimizer.step()
-            self.optimizer.zero_grad()
+                    with torch.no_grad():
+                        self.mm_probs = 0.1 * outputs_filtered.softmax(1).mean(0) + 0.9 * self.mm_probs
+
+                self.num_required_samples += entropy_filtered.size(0)
+
+                # 3. Compute weighted entropy loss
+                weight = torch.exp(self.e_threshold - entropy_filtered.detach()).requires_grad_(False)
+                loss = (entropy_filtered * weight).mean(0)
+                loss.backward()
+
+                self.optimizer.step()
+                self.optimizer.zero_grad()
+
+            return outputs, prediction_time
+
+        if self.frozen:
+            with torch.no_grad():
+                return stopwatch(device, lambda: self.model(x).softmax(1))
+
+        # Adaptation time includes the cost of the initial forward pass
+        (outputs, prediction_time), adaptation_time = stopwatch(device, _forward)
 
         if self.reforward:
             with torch.no_grad():
                 self.freeze()
-                outputs = self.model(x)
+                outputs, reforward_time = stopwatch(device, lambda: self.model(x))
                 self.unfreeze()
+                prediction_time = adaptation_time + reforward_time  # Full latency: forward + adapt + reforward
 
-        return outputs.softmax(1)
+        return outputs.softmax(1), prediction_time
 
     def reset(self):
         self.model.load_state_dict(self.model_state, strict=True)

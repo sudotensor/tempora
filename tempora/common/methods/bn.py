@@ -1,5 +1,6 @@
 import torch.nn as nn
 
+from ..utils import stopwatch
 from .base import Method
 
 
@@ -12,8 +13,8 @@ class AdaBN(Method):
 
         self.model = self._configure_model(model, momentum)
 
-    def forward(self, x):
-        return self.model(x).softmax(1)
+    def forward(self, x, device):
+        return stopwatch(device, lambda: self.model(x).softmax(1))
 
     def reset(self):
         for _, m in self.bn_modules:
@@ -53,8 +54,8 @@ class PredBN(Method):
         self.source_stats = self._get_stats(model)
         self.model = self._configure_model(model)
 
-    def forward(self, x):
-        return self.model(x).softmax(1)
+    def forward(self, x, device):
+        return stopwatch(device, lambda: self.model(x).softmax(1))
 
     def reset(self):
         pass
@@ -85,8 +86,10 @@ class PredBN(Method):
             if isinstance(m, nn.BatchNorm2d):
                 m.training = True
                 m.track_running_stats = False
+
                 m.running_mean = None
                 m.running_var = None
+            
                 self.bn_modules.append((nm, m))
 
         return model

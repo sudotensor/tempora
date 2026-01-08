@@ -1,5 +1,6 @@
 import torch
 
+from ..utils import stopwatch
 from .base import Method
 
 
@@ -19,8 +20,9 @@ class NEO(Method):
         self.feature_mean = torch.zeros(self.classifier.weight.data.shape[1], device=self.classifier.weight.device)
         self.sample_count = 0
 
-    def forward(self, x):
-        with torch.no_grad():
+    def forward(self, x, device):
+        @torch.no_grad()
+        def _forward():
             if self.frozen:
                 return self.model(x).softmax(1)
 
@@ -35,8 +37,9 @@ class NEO(Method):
             self.sample_count = total_samples
 
             outputs = self.classifier(features - self.feature_mean)  # Feature centering
+            return outputs.softmax(1)
 
-        return outputs.softmax(1)
+        return stopwatch(device, _forward)
 
     def reset(self):
         self.feature_mean.zero_()

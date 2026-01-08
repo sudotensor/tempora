@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+from ..utils import stopwatch
 from .base import Method
 from .utils import get_cpu_snapshot
 
@@ -23,31 +24,39 @@ class SHOT(Method):
 
         self._check_model(self.model)
 
-    def forward(self, x):
+    def forward(self, x, device):
+        def _forward():
+            outputs, prediction_time = None, 0.0
+
+            with torch.enable_grad():
+                outputs, prediction_time = stopwatch(device, lambda: self.model(x))
+                m_probs = outputs.softmax(1).mean(0)  # Marginal probabilities
+                entropy = -(outputs.softmax(1) * outputs.log_softmax(1)).sum(1)  # Conditional entropy
+                diversity = (m_probs * torch.log(m_probs + torch.finfo(outputs.dtype).eps)).sum(-1)  # Marginal entropy
+
+                loss = entropy.mean(0) + diversity  # Minimise conditional entropy, maximise marginal entropy
+                loss.backward()
+
+                self.optimizer.step()
+                self.optimizer.zero_grad()
+
+            return outputs, prediction_time
+
         if self.frozen:
             with torch.no_grad():
-                return self.model(x).softmax(1)
+                return stopwatch(device, lambda: self.model(x).softmax(1))
 
-        outputs = None
-        with torch.enable_grad():
-            outputs = self.model(x)
-            m_probs = outputs.softmax(1).mean(0)  # Marginal probabilities
-            entropy = -(outputs.softmax(1) * outputs.log_softmax(1)).sum(1)  # Conditional entropy
-            diversity = (m_probs * torch.log(m_probs + torch.finfo(outputs.dtype).eps)).sum(-1)  # Marginal entropy
-
-            loss = entropy.mean(0) + diversity  # Minimise conditional entropy, maximise marginal entropy
-            loss.backward()
-
-            self.optimizer.step()
-            self.optimizer.zero_grad()
+        # Adaptation time includes the cost of the initial forward pass
+        (outputs, prediction_time), adaptation_time = stopwatch(device, _forward)
 
         if self.reforward:
             with torch.no_grad():
                 self.freeze()
-                outputs = self.model(x)
+                outputs, reforward_time = stopwatch(device, lambda: self.model(x))
                 self.unfreeze()
+                prediction_time = adaptation_time + reforward_time  # Full latency: forward + adapt + reforward
 
-        return outputs.softmax(1)
+        return outputs.softmax(1), prediction_time
 
     def reset(self):
         self.model.load_state_dict(self.model_state, strict=True)

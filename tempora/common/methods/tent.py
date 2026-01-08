@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+from ..utils import stopwatch
 from .base import Method
 from .utils import get_cpu_snapshot
 
@@ -9,7 +10,8 @@ from .utils import get_cpu_snapshot
 # Paper : https://openreview.net/forum?id=uXl3bZLkr3c
 # Note  : This version differs from the original in three ways: (1) it tracks running stats. to enable frozen inference,
 #         (2) it drops batch-wise episodic resetting and multi-step gradient updates, and (3) it allows prediction after
-#         adaptation via reforward. It's identical to the original during adaptation (for predict-then-adapt).
+#         adaptation via reforward. It's identical to the original during adaptation (for predict-then-adapt). The 
+#         momentum parameter is only for BN layers.
 class Tent(Method):
     def __init__(self, model, optimizer, reforward=False, momentum=0.1):
         super().__init__()
@@ -26,14 +28,14 @@ class Tent(Method):
 
         self._check_model(self.model)
 
-    def forward(self, x):
+    def forward(self, x, device):
         if self.frozen:
             with torch.no_grad():
-                return self.model(x).softmax(1)
+                return stopwatch(device, lambda: self.model(x).softmax(1))
 
-        outputs = None
+        outputs, prediction_time = None, 0.0
         with torch.enable_grad():
-            outputs = self.model(x)
+            outputs, prediction_time = stopwatch(device, lambda: self.model(x))
             entropy = -(outputs.softmax(1) * outputs.log_softmax(1)).sum(1)  # Conditional entropy
 
             loss = entropy.mean(0)
@@ -45,10 +47,11 @@ class Tent(Method):
         if self.reforward:
             with torch.no_grad():
                 self.freeze()
-                outputs = self.model(x)
+                outputs, reforward_time = stopwatch(device, lambda: (self.freeze(), self.model(x), self.unfreeze())[1])
                 self.unfreeze()
+                prediction_time += reforward_time
 
-        return outputs.softmax(1)
+        return outputs.softmax(1), prediction_time
 
     def reset(self):
         self.model.load_state_dict(self.model_state, strict=True)

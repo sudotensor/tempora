@@ -1,10 +1,28 @@
 import random
+import time
+from contextlib import contextmanager
+from typing import Iterator
 
 import numpy as np
 import torch
 
 from .constants import BLUR_CORRUPTIONS, CORRUPTIONS, DIGITAL_CORRUPTIONS, NOISE_CORRUPTIONS, WEATHER_CORRUPTIONS
 from .datasets import get_cifar_dataloader, get_imagenet_dataloader
+
+
+@contextmanager
+def synchronise(device) -> Iterator[None]:
+    if device == "cuda": torch.cuda.synchronize()  # noqa: E701
+    yield
+    if device == "cuda": torch.cuda.synchronize()  # noqa: E701
+
+
+def stopwatch(device, func):
+    with synchronise(device):
+        start = time.perf_counter()
+        result = func()
+
+    return result, (time.perf_counter() - start) * 1000
 
 
 def parse_corruptions(cs):
