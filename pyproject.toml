@@ -12,6 +12,12 @@ dependencies = [
     "torchvision>=0.24.1",
 ]
 
+[project.optional-dependencies]
+sandbox = [
+    "seaborn>=0.13.2",
+    "scipy>=1.17.0",
+]
+
 [dependency-groups]
 dev = [
     "ipdb>=0.13.13",
