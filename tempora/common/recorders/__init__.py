@@ -1,5 +1,7 @@
+from .discrete import DiscreteRecorder
 from .offline import OfflineRecorder
 
 __all__ = [
-    "OfflineRecorder"
+    "DiscreteRecorder",
+    "OfflineRecorder",
 ]
