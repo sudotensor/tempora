@@ -15,6 +15,7 @@
 # 1. Offline evaluation
 #    1.1 ResNet-50, ImageNet-C
 #    1.2 ResNet-18, ImageNet-C
+#    1.3 ViT-Base-Patch16-224, ImageNet-C
 #
 # 1.1 ResNet-50, ImageNet-C
 # -------------------------
@@ -37,6 +38,17 @@
 # uv run python -m tempora.scripts.evaluate.offline --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/resnet-18/offline --model-arch resnet18 --method eta   --note "Offline, ETA,   RN-18, IN-C"
 # uv run python -m tempora.scripts.evaluate.offline --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/resnet-18/offline --model-arch resnet18 --method shot  --note "Offline, SHOT,  RN-18, IN-C"
 # uv run python -m tempora.scripts.evaluate.offline --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/resnet-18/offline --model-arch resnet18 --method sar   --note "Offline, SAR,   RN-18, IN-C"
+#
+# 1.3 ViT-Base-Patch16-224, ImageNet-C
+# ------------------------------------
+# uv run python -m tempora.scripts.evaluate.offline --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/offline --model-arch vit_base_patch16_224 --method basic --note "Offline, Basic, ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.offline --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/offline --model-arch vit_base_patch16_224 --method lame  --note "Offline, LAME,  ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.offline --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/offline --model-arch vit_base_patch16_224 --method neo   --note "Offline, NEO,   ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.offline --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/offline --model-arch vit_base_patch16_224 --method tent  --note "Offline, Tent,  ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.offline --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/offline --model-arch vit_base_patch16_224 --method eta   --note "Offline, ETA,   ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.offline --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/offline --model-arch vit_base_patch16_224 --method shot  --note "Offline, SHOT,  ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.offline --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/offline --model-arch vit_base_patch16_224 --method sar   --note "Offline, SAR,   ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.offline --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/offline --model-arch vit_base_patch16_224 --method spa   --note "Offline, SPA,   ViT-Base-Patch16-224, IN-C"
 
 
 # 2. Discrete evaluation
@@ -44,6 +56,8 @@
 #    2.2 Buffered, ResNet-50, ImageNet-C at various utilisation levels
 #    2.3 Unbuffered (Alfarra et al.), ResNet-18, ImageNet-C
 #    2.4 Buffered, ResNet-18, ImageNet-C at 100% utilisation only
+#    2.5 Unbuffered (Alfarra et al.), ViT-B-Patch16-224, ImageNet-C
+#    2.6 Buffered, ViT-Base-Patch16-224, ImageNet-C at various utilisation levels
 #
 # 2.1 Unbuffered (Alfarra et al.), ResNet-50, ImageNet-C
 # ------------------------------------------------------
@@ -63,13 +77,14 @@
 #     iat=$(echo $info | cut -d: -f1)
 #     rho=$(echo $info | cut -d: -f2)
 #     for method in basic adabn lame neo tent eta shot sar; do
-#         uv run python -m tempora.scripts.evaluate.discrete         \
-#             --dataset-name imagenet                                \
-#             --dataset-dist noise blur weather digital              \
-#             --output-dir output/imagenet-c/resnet-50/discrete-$rho \
-#             --queue-size 1                                         \
-#             --interval $iat                                        \
-#             --method $method                                       \
+#         uv run python -m tempora.scripts.evaluate.discrete                  \
+#             --dataset-name imagenet                                         \
+#             --dataset-dist noise blur weather digital                       \
+#             --output-dir output/imagenet-c/resnet-50/discrete/buffered-$rho \
+#             --queue-size 1                                                  \
+#             --interval $iat                                                 \
+#             --model-arch resnet50                                           \
+#             --method $method                                                \
 #             --note "Discrete, ρ=$rho%, IAT=$iat, $method, RN-50, IN-C"
 #     done
 # done
@@ -95,11 +110,41 @@
 # uv run python -m tempora.scripts.evaluate.discrete --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/resnet-18/discrete/buffered --queue-size 1 --interval 12.3 --model-arch resnet18 --method eta   --note "Discrete, Single-slot queue, 12.3, ETA,   RN-18, IN-C"
 # uv run python -m tempora.scripts.evaluate.discrete --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/resnet-18/discrete/buffered --queue-size 1 --interval 12.3 --model-arch resnet18 --method shot  --note "Discrete, Single-slot queue, 12.3, SHOT,  RN-18, IN-C"
 # uv run python -m tempora.scripts.evaluate.discrete --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/resnet-18/discrete/buffered --queue-size 1 --interval 12.3 --model-arch resnet18 --method sar   --note "Discrete, Single-slot queue, 12.3, SAR,   RN-18, IN-C"
+#
+# 2.5 Unbuffered (Alfarra et al.), ViT-B-Patch16-224, ImageNet-C
+# uv run python -m tempora.scripts.evaluate.discrete --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/discrete/unbuffered --queue-size 0 --interval 105.3 --model-arch vit_base_patch16_224 --method basic --note "Discrete, No queue, 105.3, Basic, ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.discrete --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/discrete/unbuffered --queue-size 0 --interval 105.3 --model-arch vit_base_patch16_224 --method lame  --note "Discrete, No queue, 105.3, LAME,  ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.discrete --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/discrete/unbuffered --queue-size 0 --interval 105.3 --model-arch vit_base_patch16_224 --method neo   --note "Discrete, No queue, 105.3, NEO,   ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.discrete --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/discrete/unbuffered --queue-size 0 --interval 105.3 --model-arch vit_base_patch16_224 --method tent  --note "Discrete, No queue, 105.3, Tent,  ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.discrete --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/discrete/unbuffered --queue-size 0 --interval 105.3 --model-arch vit_base_patch16_224 --method eta   --note "Discrete, No queue, 105.3, ETA,   ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.discrete --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/discrete/unbuffered --queue-size 0 --interval 105.3 --model-arch vit_base_patch16_224 --method shot  --note "Discrete, No queue, 105.3, SHOT,  ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.discrete --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/discrete/unbuffered --queue-size 0 --interval 105.3 --model-arch vit_base_patch16_224 --method sar   --note "Discrete, No queue, 105.3, SAR,   ViT-Base-Patch16-224, IN-C"
+# uv run python -m tempora.scripts.evaluate.discrete --dataset-name imagenet --dataset-dist noise blur weather digital --output-dir output/imagenet-c/vit-base-patch16-224/discrete/unbuffered --queue-size 0 --interval 105.3 --model-arch vit_base_patch16_224 --method spa   --note "Discrete, No queue, 105.3, SPA,   ViT-Base-Patch16-224, IN-C"
+#
+# 2.6 Buffered, ViT-Base-Patch16-224, ImageNet-C at various utilisation levels
+# iat = {1, sqrt(2), 2, 2 * sqrt(2), 4} * 105.3 ms; this corresponds to rho in {100%, 70%, 50%, 35%, 25%} utilisation
+# -----------------------------------------------------------------
+# for info in "105.3:100" "148.9:70" "210.6:50" "297.8:35" "421.2:25"; do
+#     iat=$(echo $info | cut -d: -f1)
+#     rho=$(echo $info | cut -d: -f2)
+#     for method in basic lame neo tent eta shot sar spa; do
+#         uv run python -m tempora.scripts.evaluate.discrete                             \
+#             --dataset-name imagenet                                                    \
+#             --dataset-dist noise blur weather digital                                  \
+#             --output-dir output/imagenet-c/vit-base-patch16-224/discrete/buffered-$rho \
+#             --queue-size 1                                                             \
+#             --interval $iat                                                            \
+#             --model-arch vit_base_patch16_224                                          \
+#             --method $method                                                           \
+#             --note "Discrete, ρ=$rho%, IAT=$iat, $method, ViT-Base-Patch16-224, IN-C"
+#     done
+# done
 
 
 # 3. Continuous evaluation
 #    3.1 ResNet-50, ImageNet-C 
 #    3.2 ResNet-18, ImageNet-C
+#    3.3 ViT-Base-Patch16-224, ImageNet-C
 #
 # Note: You will have to run offline evaluation and modify the input file paths accordingly.
 #
@@ -128,11 +173,25 @@
 #     uv run python -m tempora.scripts.evaluate.continuous output/imagenet-c/resnet-18/offline/20260113_130333.json --output-dir output/imagenet-c/resnet-18/continuous/threshold-$threshold --response-budget 12.3 --decay-threshold $threshold; sleep 1
 #     uv run python -m tempora.scripts.evaluate.continuous output/imagenet-c/resnet-18/offline/20260113_132243.json --output-dir output/imagenet-c/resnet-18/continuous/threshold-$threshold --response-budget 12.3 --decay-threshold $threshold; sleep 1
 # done
+#
+# 3.3 ViT-Base-Patch16-224, ImageNet-C
+# ------------------------------------
+# for threshold in 200 400 1000 2000; do
+#     uv run python -m tempora.scripts.evaluate.continuous output/imagenet-c/vit-base-patch16-224/offline/20260203_214745.json --output-dir output/imagenet-c/vit-base-patch16-224/continuous/threshold-$threshold --response-budget 105.3 --decay-threshold $threshold; sleep 1
+#     uv run python -m tempora.scripts.evaluate.continuous output/imagenet-c/vit-base-patch16-224/offline/20260203_232415.json --output-dir output/imagenet-c/vit-base-patch16-224/continuous/threshold-$threshold --response-budget 105.3 --decay-threshold $threshold; sleep 1
+#     uv run python -m tempora.scripts.evaluate.continuous output/imagenet-c/vit-base-patch16-224/offline/20260206_145544.json --output-dir output/imagenet-c/vit-base-patch16-224/continuous/threshold-$threshold --response-budget 105.3 --decay-threshold $threshold; sleep 1
+#     uv run python -m tempora.scripts.evaluate.continuous output/imagenet-c/vit-base-patch16-224/offline/20260206_152314.json --output-dir output/imagenet-c/vit-base-patch16-224/continuous/threshold-$threshold --response-budget 105.3 --decay-threshold $threshold; sleep 1
+#     uv run python -m tempora.scripts.evaluate.continuous output/imagenet-c/vit-base-patch16-224/offline/20260206_173823.json --output-dir output/imagenet-c/vit-base-patch16-224/continuous/threshold-$threshold --response-budget 105.3 --decay-threshold $threshold; sleep 1
+#     uv run python -m tempora.scripts.evaluate.continuous output/imagenet-c/vit-base-patch16-224/offline/20260206_202810.json --output-dir output/imagenet-c/vit-base-patch16-224/continuous/threshold-$threshold --response-budget 105.3 --decay-threshold $threshold; sleep 1
+#     uv run python -m tempora.scripts.evaluate.continuous output/imagenet-c/vit-base-patch16-224/offline/20260206_232747.json --output-dir output/imagenet-c/vit-base-patch16-224/continuous/threshold-$threshold --response-budget 105.3 --decay-threshold $threshold; sleep 1
+#     uv run python -m tempora.scripts.evaluate.continuous output/imagenet-c/vit-base-patch16-224/offline/20260207_002114.json --output-dir output/imagenet-c/vit-base-patch16-224/continuous/threshold-$threshold --response-budget 105.3 --decay-threshold $threshold; sleep 1
+# done
 
 
 # 4. Amortised utilisation
 #    4.1 ResNet-50, ImageNet-C at various overhead budgets
 #    4.2 ResNet-18, ImageNet-C at various overhead budgets
+#    4.3 ViT-Base-Patch16-224, ImageNet-C at various overhead budgets
 #
 # 4.1 ResNet-50, ImageNet-C at various overhead budgets
 # Loop structure: method (outer), budget (inner, ascending)
@@ -184,6 +243,34 @@
 #         total=$(echo "$lines" | wc -l)
 #         n_rem=$(echo "$lines" | awk -F: '{gsub(/[^0-9.]/, "", $2); if ($2 + 0 > 0) print}' | wc -l)
 #
+#         echo "Distributions: $total, With remaining overhead: $n_rem"
+#         if [ "$n_rem" -eq "$total" ] && [ "$total" -gt 0 ]; then
+#             echo "All distributions have remaining overhead. Skipping larger budgets for $method."
+#             break
+#         fi
+#     done
+# done
+#
+# 4.3 ViT-Base-Patch16-224, ImageNet-C at various overhead budgets
+# ----------------------------------------------------------------
+# for method in basic lame neo tent eta shot sar spa; do
+#     for budget in 2500 5000 10000 20000 40000 80000; do
+#         echo "Running: method=$method, budget=$budget"
+#         output=$(uv run python -m tempora.scripts.evaluate.amortised                         \
+#                 --dataset-name imagenet                                                      \
+#                 --dataset-dist noise blur weather digital                                    \
+#                 --output-dir output/imagenet-c/vit-base-patch16-224/amortised/budget-$budget \
+#                 --response-budget 105.3                                                      \
+#                 --overhead-budget $budget                                                    \
+#                 --model-arch vit_base_patch16_224                                            \
+#                 --method $method                                                             \
+#                 --note "Amortised, $budget, 105.3, $method, ViT-Base-Patch16-224, IN-C" 2>&1 | tee /dev/stderr)
+       
+#         # Check if all distributions have remaining overhead > 0 (budget not exhausted)
+#         lines=$(echo "$output" | grep -E "^Remaining\s+:" | sed 's/,//g')
+#         total=$(echo "$lines" | wc -l)
+#         n_rem=$(echo "$lines" | awk -F: '{gsub(/[^0-9.]/, "", $2); if ($2 + 0 > 0) print}' | wc -l)
+
 #         echo "Distributions: $total, With remaining overhead: $n_rem"
 #         if [ "$n_rem" -eq "$total" ] && [ "$total" -gt 0 ]; then
 #             echo "All distributions have remaining overhead. Skipping larger budgets for $method."

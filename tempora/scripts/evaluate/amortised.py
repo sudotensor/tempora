@@ -89,7 +89,7 @@ if __name__ == "__main__":
     setup_determinism(args.seed, args.device)
 
     model = setup_model(args.model_arch, args.dataset_name, args.model_ckpt, args.device)
-    method = setup_method(args.method, model, args.dataset_name)
+    method = setup_method(args.method, model, args.dataset_name, args.model_arch, args.device)
 
     rs = {}
     ds = parse_distributions(args.dataset_dist)
@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
         recorder = OfflineRecorder()
         kwargs = {"batch_size": args.batch_size, "drop_last": True, "shuffle": True}
-        dataloader = setup_dataloader(args.dataset_name, args.dataset_root, d, **kwargs)
+        dataloader = setup_dataloader(args.model_arch, args.dataset_name, args.dataset_root, d, **kwargs)
 
         print(d)
         runner(method, dataloader, recorder, args.device, args.response_budget, args.overhead_budget)

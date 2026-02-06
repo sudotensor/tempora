@@ -10,7 +10,7 @@ from .utils import get_cpu_snapshot
 
 # Source: https://github.com/mr-eggplant/SAR
 # Paper : https://arxiv.org/abs/2302.12400
-# Note  : This version largely follows the code structure found in in tent.py. The momentum parameter is only for BN 
+# Note  : This version largely follows the code structure found in in tent.py. The momentum parameter is only for BN
 #         layers.
 class SAR(Method):
     def __init__(self, model, optimizer, reforward=False, momentum=0.1, e_threshold=0.4 * log(1000), r_threshold=0.2):
@@ -98,12 +98,13 @@ class SAR(Method):
     @staticmethod
     def collect_params(model):
         # Skip top layers for adaptation: layer4 for ResNets and blocks 9-11 for ViT-Base
-        skip_layers = ["layer4", "blocks.9", "blocks.10", "blocks.11", "norm.", "norm"]
+        skip_in_name = ["layer4", "blocks.9", "blocks.10", "blocks.11", "norm."]  # Substring match
+        skip_is_name = ["norm"]  # Exact match
 
         ps = []
         ns = []
         for nm, m in model.named_modules():
-            if any(layer in nm for layer in skip_layers):
+            if nm in skip_is_name or any(s in nm for s in skip_in_name):
                 continue
 
             if isinstance(m, (nn.BatchNorm2d, nn.LayerNorm, nn.GroupNorm)):

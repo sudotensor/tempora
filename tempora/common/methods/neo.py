@@ -63,8 +63,8 @@ class NEO(Method):
             return model.fc
         elif hasattr(model, "classifier"):
             return model.classifier
-        elif hasattr(model, "heads"):
-            return model.heads
+        elif hasattr(model, "head"):
+            return model.head
         raise ValueError("Cannot find classifier layer")
 
     @staticmethod

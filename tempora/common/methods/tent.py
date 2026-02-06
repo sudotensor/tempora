@@ -70,7 +70,7 @@ class Tent(Method):
         ps = []
         ns = []
         for nm, m in model.named_modules():
-            if isinstance(m, nn.BatchNorm2d):
+            if isinstance(m, (nn.BatchNorm2d, nn.GroupNorm, nn.LayerNorm)):
                 for np, p in m.named_parameters():
                     if np in ["weight", "bias"]:
                         ps.append(p)
@@ -86,6 +86,8 @@ class Tent(Method):
                 m.requires_grad_(True)
                 m.momentum = momentum
                 m.reset_running_stats()  # Discard source statistics
+            if isinstance(m, (nn.GroupNorm, nn.LayerNorm)):
+                m.requires_grad_(True)
 
         return model
     
@@ -96,5 +98,5 @@ class Tent(Method):
         assert any(param_grads), "TENT needs some parameters with gradients."
         assert not all(param_grads), "TENT should not update all parameters."
 
-        has_bn = any(isinstance(m, nn.BatchNorm2d) for m in model.modules())
-        assert has_bn, "TENT requires batch normalization layers."
+        has_norm = any(isinstance(m, (nn.BatchNorm2d, nn.GroupNorm, nn.LayerNorm)) for m in model.modules())
+        assert has_norm, "TENT requires normalization layers."

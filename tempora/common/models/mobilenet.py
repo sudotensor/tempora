@@ -16,7 +16,6 @@ def get_mobilenet(arch: str, dataset: str, checkpoint: str | None = None, device
 
     if arch not in ["mobilenet_v2", "mobilenet_v3_small"]:
         raise ValueError(f"Unsupported architecture: {arch}. Choose 'mobilenet_v2' or 'mobilenet_v3_small'")
-
     if dataset not in ["cifar-10", "cifar-100", "imagenet"]:
         raise ValueError(f"Unsupported dataset: {dataset}. Choose 'cifar-10', 'cifar-100' or 'imagenet'")
 
@@ -27,6 +26,7 @@ def get_mobilenet(arch: str, dataset: str, checkpoint: str | None = None, device
         case "cifar-100":
             kwargs["num_classes"] = 100
         case "imagenet":
+            kwargs["num_classes"] = 1000
             if checkpoint is None:
                 kwargs["weights"] = "IMAGENET1K_V1"
 

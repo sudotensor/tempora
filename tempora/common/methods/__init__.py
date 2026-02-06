@@ -5,6 +5,7 @@ from .lame import LAME
 from .neo import NEO
 from .sar import SAR
 from .shot import SHOT
+from .spa import SPA
 from .tent import Tent
 
 __all__ = [
@@ -16,5 +17,6 @@ __all__ = [
     "PredBN",
     "SAR",
     "SHOT",
+    "SPA",
     "Tent",
 ]

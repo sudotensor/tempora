@@ -78,7 +78,7 @@ class SHOT(Method):
         # Collect all params. except ones from known classifiers; double check the param. group for new networks!
         # Transformer encoders have linear layers, so we can't do a general isinstance(m, nn.Linear) check.
         for np, p in model.named_parameters():
-            if p.requires_grad and not any(x in np for x in ["fc", "classifier", "heads"]):
+            if p.requires_grad and not any(x in np for x in ["fc", "classifier", "head"]):
                 ps.append(p)
                 ns.append(np)
 
@@ -89,7 +89,7 @@ class SHOT(Method):
         model.requires_grad_(True)
 
         for nm, m in model.named_modules():
-            if any(x in nm for x in ["fc", "classifier", "heads"]):
+            if any(x in nm for x in ["fc", "classifier", "head"]):
                 if isinstance(m, nn.Linear):
                     m.requires_grad_(False)
 
