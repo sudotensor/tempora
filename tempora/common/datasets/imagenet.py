@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 
-from ..constants import CORRUPTIONS
+from ..constants import CORRUPTIONS, IMAGENET_NATURAL_VARIANTS
 
 
 def get_imagenet_dataloader(
@@ -22,11 +22,11 @@ def get_imagenet_dataloader(
 
     Args:
         root:        Path to the directory to load the dataset from
-        variant:     Corruption name or 'clean' (defaults to 'clean')
-        severity:    Corruption severity 1-5 (defaults to 5, ignored for 'clean')
-        batch_size:  Batch size (defaults to 32)
+        variant:     Corruption name, natural variant name, or 'clean' (defaults to 'clean')
+        severity:    Corruption severity 1-5 (defaults to 5, ignored for 'clean' and natural variants)
+        batch_size:  Batch size (defaults to 64)
         shuffle:     Whether to shuffle data (defaults to True)
-        split:       Create a 90/10
+        split:       Create a val/test split (10% val, 90% test)
         resolution:  Image resolution for center crop (defaults to 224)
         **kwargs:    Additional arguments passed to DataLoader
     """
@@ -39,18 +39,26 @@ def get_imagenet_dataloader(
         case _:
             normalize = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 
-    if variant == "clean":
-        transform = transforms.Compose([
-            transforms.Resize(int(resolution * 256 / 224)),
-            transforms.CenterCrop(resolution),
-            transforms.ToTensor(),
-            normalize,
-        ])
+    natural_transform = transforms.Compose([
+        transforms.Resize(int(resolution * 256 / 224)),
+        transforms.CenterCrop(resolution),
+        transforms.ToTensor(),
+        normalize,
+    ])
 
-        validation_path = os.path.join(root, "val")
-        dataset = ImageFolder(validation_path, transform=transform)
+    if variant == "clean":
+        dataset = ImageFolder(os.path.join(root, "val"), transform=natural_transform)
+    elif variant in IMAGENET_NATURAL_VARIANTS:
+        # FIXME: severity is silently ignored for natural distribution shift variants; enforce or handle explicitly
+        # when the dataset abstraction is overhauled. Root is already set to the variant directory by setup_dataloader.
+        dataset = ImageFolder(root, transform=natural_transform)
+        if variant == "imagenet-v2":
+            # ImageNet-V2 folders are named by integer class index (0–999), but ImageFolder sorts alphabetically
+            # ('0', '1', '10', '100', ...), scrambling the label mapping. Remap to actual class indices.
+            class_remap = [int(c) for c in dataset.classes]
+            dataset.target_transform = class_remap.__getitem__
     else:
-        assert variant in CORRUPTIONS, f"Corruption {variant} not in {CORRUPTIONS}"
+        assert variant in CORRUPTIONS, f"Unknown variant '{variant}': not a corruption, natural variant, or 'clean'"
         assert 1 <= severity <= 5, "Severity must be 1-5"
 
         transform = transforms.Compose([transforms.CenterCrop(resolution), transforms.ToTensor(), normalize])
@@ -61,7 +69,8 @@ def get_imagenet_dataloader(
     if not split:
         return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, **kwargs)
 
-    validation_dataset, test_dataset = random_split(dataset, [5000, len(dataset) - 5000])
+    validation_size = len(dataset) // 10
+    validation_dataset, test_dataset = random_split(dataset, [validation_size, len(dataset) - validation_size])
     validation_loader = DataLoader(validation_dataset, batch_size=64)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle, **kwargs)
     return validation_loader, test_loader

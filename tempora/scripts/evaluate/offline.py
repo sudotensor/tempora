@@ -7,6 +7,7 @@ from tqdm import tqdm
 from tempora.common.constants import DATASETS, DEVICES, METHODS
 from tempora.common.recorders import OfflineRecorder
 from tempora.common.utils import (
+    get_class_mask,
     parse_distributions,
     print_arguments,
     save_results,
@@ -20,7 +21,7 @@ from tempora.common.utils import (
 
 
 @torch.no_grad()
-def runner(method, dataloader, recorder, device):
+def runner(method, dataloader, recorder, device, class_mask=None):
     for i, (images, labels) in enumerate(tqdm(dataloader, leave=False)):
         images = images.to(device)
         labels = labels.to(device)
@@ -32,7 +33,10 @@ def runner(method, dataloader, recorder, device):
             method.reset()
 
         (outputs, prediction_time), wall_clock_time = stopwatch(device, lambda: method(images, device))
-        
+
+        if class_mask is not None:
+            outputs = outputs[:, class_mask]
+
         num_correct = (outputs.argmax(1) == labels).sum().item()
         num_samples = labels.size(0)
 
@@ -78,9 +82,10 @@ if __name__ == "__main__":
         recorder = OfflineRecorder()
         kwargs = {"batch_size": args.batch_size, "drop_last": True, "shuffle": True}
         dataloader = setup_dataloader(args.model_arch, args.dataset_name, args.dataset_root, d, **kwargs)
+        class_mask = get_class_mask(d, args.device)
 
         print(d)
-        runner(method, dataloader, recorder, args.device)
+        runner(method, dataloader, recorder, args.device, class_mask)
         rs[d] = recorder.emit()
         
         method.reset()

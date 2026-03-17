@@ -7,6 +7,7 @@ from tqdm import tqdm
 from tempora.common.constants import DATASETS, DEVICES, METHODS
 from tempora.common.recorders import OfflineRecorder
 from tempora.common.utils import (
+    get_class_mask,
     parse_distributions,
     print_arguments,
     save_results,
@@ -23,7 +24,7 @@ from tempora.common.utils import (
 # exceeds the budget, at which point it is frozen for the remainder of the evaluation. This measures how effectively a
 # method uses a fixed time budget. Efficient methods will adapt more batches before exhausting the budget.
 @torch.no_grad()
-def runner(method, dataloader, recorder, device, response_budget, overhead_budget):
+def runner(method, dataloader, recorder, device, response_budget, overhead_budget, class_mask=None):
     num_batches_cleared = 0
     is_budget_exhausted = False
     cumulative_overhead = 0.0
@@ -42,6 +43,9 @@ def runner(method, dataloader, recorder, device, response_budget, overhead_budge
             method.freeze()
 
         (outputs, prediction_time), wall_clock_time = stopwatch(device, lambda: method(images, device))
+
+        if class_mask is not None:
+            outputs = outputs[:, class_mask]
 
         num_correct = (outputs.argmax(1) == labels).sum().item()
         num_samples = labels.size(0)
@@ -99,9 +103,10 @@ if __name__ == "__main__":
         recorder = OfflineRecorder()
         kwargs = {"batch_size": args.batch_size, "drop_last": True, "shuffle": True}
         dataloader = setup_dataloader(args.model_arch, args.dataset_name, args.dataset_root, d, **kwargs)
+        class_mask = get_class_mask(d, args.device)
 
         print(d)
-        runner(method, dataloader, recorder, args.device, args.response_budget, args.overhead_budget)
+        runner(method, dataloader, recorder, args.device, args.response_budget, args.overhead_budget, class_mask)
         rs[d] = recorder.emit()
 
         method.reset()

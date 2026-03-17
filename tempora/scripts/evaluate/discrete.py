@@ -8,6 +8,7 @@ from tqdm import tqdm
 from tempora.common.constants import DATASETS, DEVICES, METHODS
 from tempora.common.recorders import DiscreteRecorder
 from tempora.common.utils import (
+    get_class_mask,
     parse_distributions,
     print_arguments,
     save_results,
@@ -28,10 +29,13 @@ from tempora.common.utils import (
 # only affect which batches are processed, not how many; they only improve availability as a consequence of the drain.
 # The effective response latency of a batch is its prediction time + queue wait time. 
 @torch.no_grad()
-def runner(method, dataloader, recorder, device, interval, queue_size=0):
+def runner(method, dataloader, recorder, device, interval, queue_size=0, class_mask=None):
     def process_job(start_time, index, images, labels):  # Run adaptation on a batch (job)
         (outputs, prediction_time), wall_clock_time = stopwatch(device, lambda: method(images, device))
         queue_wait_time = start_time - (index * interval)
+
+        if class_mask is not None:
+            outputs = outputs[:, class_mask]
 
         num_correct = (outputs.argmax(1) == labels).sum().item()
         num_samples = labels.size(0)
@@ -119,9 +123,10 @@ if __name__ == "__main__":
         recorder = DiscreteRecorder()
         kwargs = {"batch_size": args.batch_size, "drop_last": True, "shuffle": True}
         dataloader = setup_dataloader(args.model_arch, args.dataset_name, args.dataset_root, d, **kwargs)
+        class_mask = get_class_mask(d, args.device)
 
         print(d)
-        runner(method, dataloader, recorder, args.device, args.interval, args.queue_size)
+        runner(method, dataloader, recorder, args.device, args.interval, args.queue_size, class_mask)
         rs[d] = recorder.emit()
 
         method.reset()

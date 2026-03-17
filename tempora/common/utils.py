@@ -9,7 +9,15 @@ from typing import Iterator
 import numpy as np
 import torch
 
-from .constants import BLUR_CORRUPTIONS, CORRUPTIONS, DIGITAL_CORRUPTIONS, NOISE_CORRUPTIONS, WEATHER_CORRUPTIONS
+from .constants import (
+    BLUR_CORRUPTIONS,
+    CORRUPTIONS,
+    DIGITAL_CORRUPTIONS,
+    IMAGENET_NATURAL_VARIANTS,
+    IMAGENET_VARIANT_CLASSES,
+    NOISE_CORRUPTIONS,
+    WEATHER_CORRUPTIONS,
+)
 from .datasets import get_cifar_dataloader, get_imagenet_dataloader
 from .models import FeatureAdapter, get_mobilenet, get_resnet, get_vit
 
@@ -72,7 +80,14 @@ def setup_determinism(seed, device):
 
 
 def setup_dataloader(arch, dataset, root, variant, **kwargs):
-    root = str(root / (dataset if variant == "clean" else f"{dataset}-c"))
+    if variant in IMAGENET_NATURAL_VARIANTS and dataset != "imagenet":
+        raise ValueError(f"'{variant}' is only valid with --dataset-name imagenet")
+    
+    if dataset == "imagenet" and variant in IMAGENET_NATURAL_VARIANTS:
+        root = str(root / variant)
+    else:
+        root = str(root / (dataset if variant == "clean" else f"{dataset}-c"))
+
     match dataset:
         case "cifar-10":
             return get_cifar_dataloader("CIFAR10", root, variant=variant, **kwargs)
@@ -164,6 +179,11 @@ def get_spa_hyperparameters(arch, model):
             return 0.01, 0.05, model.head.in_features, 0.2, 0.4
         case _:
             raise ValueError(f"SPA does not support '{arch}'. Use 'resnet50_gn' or 'vit_base_patch16_224'.")
+
+
+def get_class_mask(variant, device):
+    classes = IMAGENET_VARIANT_CLASSES.get(variant)
+    return torch.tensor(classes).to(device) if classes is not None else None
 
 
 def save_results(rs, args):
