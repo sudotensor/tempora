@@ -82,7 +82,7 @@ def setup_determinism(seed, device):
 def setup_dataloader(arch, dataset, root, variant, **kwargs):
     if variant in IMAGENET_NATURAL_VARIANTS and dataset != "imagenet":
         raise ValueError(f"'{variant}' is only valid with --dataset-name imagenet")
-    
+
     if dataset == "imagenet" and variant in IMAGENET_NATURAL_VARIANTS:
         root = str(root / variant)
     else:
@@ -112,13 +112,13 @@ def setup_model(arch, dataset, ckpt, device):
 
 def setup_method(method, model, dataset, arch, device):
     # Avoids circular import with stopwatch function
-    from .methods import ETA, LAME, NEO, SAR, SHOT, SPA, AdaBN, Basic, PredBN, Tent
+    from .methods import CMF, ETA, LAME, NEO, SAR, SHOT, SPA, AdaBN, Basic, DeYO, PredBN, Tent, ZeroSIAM
     from .methods.utils import SAM
 
     if arch == "vit_base_patch16_224" and method in ["adabn", "predbn"]:
         raise ValueError("Unsupported combination. The chosen architecture lacks batch normalisation layers.")
-    if method == "spa" and arch not in ["resnet50_gn", "vit_base_patch16_224"]:
-        raise ValueError(f"SPA does not support '{arch}'. Use 'resnet50_gn' or 'vit_base_patch16_224'.")
+    if method in ["spa", "zerosiam"] and arch not in ["resnet50_gn", "vit_base_patch16_224"]:
+        raise ValueError(f"'{method}' does not support '{arch}'. Use 'resnet50_gn' or 'vit_base_patch16_224'.")
 
     num_classes = {"cifar-10": 10, "cifar-100": 100, "imagenet": 1000}[dataset]
     e_threshold = 0.4 * math.log(num_classes)
@@ -140,6 +140,30 @@ def setup_method(method, model, dataset, arch, device):
         case "predbn":
             return PredBN(model)
         # Gradient-based
+        case "cmf":
+            cmf_lr = 0.00025 if arch == "vit_base_patch16_224" else 0.0002
+            q = 0.005 if arch == "vit_base_patch16_224" else 0.00025  # Kalman process noise (architecture-specific)
+
+            momentum_probs = 0.9  # EMA momentum for tracking the running class distribution (diversity weighting)
+            temperature = 1 / 3   # Sharpening temperature: lower → more extreme sample weights
+            alpha = 0.99          # Kalman predict step: pull rate of hidden state toward source each batch
+            gamma = 0.99          # Ensemble step: pull rate of adapted model toward Kalman-filtered hidden state
+
+            ps, _ = CMF.collect_params(model)
+            optim = torch.optim.SGD(ps, lr=cmf_lr, momentum=0.9)
+            return CMF(model, optim, reforward=False, momentum=0.1,
+                       momentum_probs=momentum_probs, temperature=temperature,
+                       alpha=alpha, gamma=gamma, q=q)
+        case "deyo":
+            e1_threshold = 0.5 * math.log(num_classes)
+            e2_threshold = 0.4 * math.log(num_classes)
+            p_threshold = 0.2
+            patch_len = 4
+
+            ps, _ = DeYO.collect_params(model)
+            optim = torch.optim.SGD(ps, lr=lr, momentum=0.9)
+            return DeYO(model, optim, reforward=False, momentum=0.1, e1_threshold=e1_threshold, 
+                        e2_threshold=e2_threshold, p_threshold=p_threshold, patch_len=patch_len)
         case "eta":
             ps, _ = ETA.collect_params(model)
             optim = torch.optim.SGD(ps, lr=lr, momentum=0.9)
@@ -165,6 +189,13 @@ def setup_method(method, model, dataset, arch, device):
             ps, _ = Tent.collect_params(model)
             optim = torch.optim.SGD(ps, lr=lr, momentum=0.9)
             return Tent(model, optim, reforward=False, momentum=0.1)
+        case "zerosiam":
+            projector_dim, backbone_lr, projector_lr = get_zerosiam_hyperparameters(arch, model)
+            model = FeatureAdapter(arch, model, projector_dim).to(device)
+            ps, _ = ZeroSIAM.collect_params(model)
+            backbone_optim = torch.optim.SGD(ps, lr=backbone_lr, momentum=0.9)
+            projector_optim = torch.optim.SGD([model.projector.weight], lr=projector_lr, momentum=0.9)
+            return ZeroSIAM(model, backbone_optim, projector_optim, reforward=False, momentum=0.1)
         case _:
             raise ValueError(f"Unknown method: {method}")
 
@@ -179,6 +210,18 @@ def get_spa_hyperparameters(arch, model):
             return 0.01, 0.05, model.head.in_features, 0.2, 0.4
         case _:
             raise ValueError(f"SPA does not support '{arch}'. Use 'resnet50_gn' or 'vit_base_patch16_224'.")
+
+
+# ZeroSIAM authors provide hyperparameters for resnet50_gn and vit_base_patch16_224 only.
+# Source: https://github.com/Cascol-Chen/ZeroSiam/blob/main/main.sh
+def get_zerosiam_hyperparameters(arch, model):
+    match arch:
+        case "resnet50_gn":
+            return model.fc.in_features, 0.0025, 0.025    # backbone_lr, projector_lr
+        case "vit_base_patch16_224":
+            return model.head.in_features, 0.005, 0.005
+        case _:
+            raise ValueError(f"ZeroSIAM does not support '{arch}'. Use 'resnet50_gn' or 'vit_base_patch16_224'.")
 
 
 def get_class_mask(variant, device):
