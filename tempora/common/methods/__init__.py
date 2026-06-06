@@ -9,6 +9,7 @@ from .sar import SAR
 from .shot import SHOT
 from .spa import SPA
 from .tent import Tent
+from .variants import ETANoReset, SHOTNorm
 from .zerosiam import ZeroSIAM
 
 __all__ = [
@@ -17,11 +18,13 @@ __all__ = [
     "CMF",
     "DeYO",
     "ETA",
+    "ETANoReset",
     "LAME",
     "NEO",
     "PredBN",
     "SAR",
     "SHOT",
+    "SHOTNorm",
     "SPA",
     "Tent",
     "ZeroSIAM",

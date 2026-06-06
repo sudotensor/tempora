@@ -24,10 +24,10 @@ from tempora.common.utils import (
 # Discrete-time simulation with queuing where batches arrive every interval (ms). Arrivals enter a fixed-capacity queue
 # when the pipeline is busy. If the queue is full, oldest queued batches are evicted and receive no predictions. When 
 # free, the pipeline picks up the oldest queued batch. The queue keeps the pipeline continuously fed. The pipeline can
-# only process one batch at a time. When the wall clock time (W) exceeds the interval (γ), the pipeline is bottlenecked.
-# A queue size of 1 removes idle gaps between processing, improving availability from ~γ/W × γ/W to ~γ/W. Larger queues
-# only affect which batches are processed, not how many; they only improve availability as a consequence of the drain.
-# The effective response latency of a batch is its prediction time + queue wait time. 
+# only process one batch at a time. When the wall clock time exceeds the interval, the pipeline is bottlenecked.
+# A queue size of 1 removes idle gaps between processing, improving availability. Larger queues only affect which 
+# batches are processed, not how many; they only improve availability as a consequence of the drain. The effective
+# response latency of a batch is its prediction time + queue wait time. 
 @torch.no_grad()
 def runner(method, dataloader, recorder, device, interval, queue_size=0, class_mask=None):
     def process_job(start_time, index, images, labels):  # Run adaptation on a batch (job)

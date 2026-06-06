@@ -46,5 +46,5 @@ IMAGENET_VARIANT_CLASSES = {
 }
 
 # Remember to update the following when more methods or datasets are added!
-METHODS = ["adabn", "basic", "cmf", "deyo", "eta", "lame", "neo", "predbn", "sar", "shot", "spa", "tent", "zerosiam"]
+METHODS = ["adabn", "basic", "cmf", "deyo", "eta", "eta_no_reset", "lame", "neo", "predbn", "sar", "shot", "shot_norm", "spa", "tent", "zerosiam"]
 DATASETS = ["cifar-10", "cifar-100", "imagenet"]

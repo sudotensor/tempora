@@ -112,7 +112,7 @@ def setup_model(arch, dataset, ckpt, device):
 
 def setup_method(method, model, dataset, arch, device):
     # Avoids circular import with stopwatch function
-    from .methods import CMF, ETA, LAME, NEO, SAR, SHOT, SPA, AdaBN, Basic, DeYO, PredBN, Tent, ZeroSIAM
+    from .methods import CMF, ETA, ETANoReset, LAME, NEO, SAR, SHOT, SHOTNorm, SPA, AdaBN, Basic, DeYO, PredBN, Tent, ZeroSIAM  # noqa: I001
     from .methods.utils import SAM
 
     if arch == "vit_base_patch16_224" and method in ["adabn", "predbn"]:
@@ -168,6 +168,10 @@ def setup_method(method, model, dataset, arch, device):
             ps, _ = ETA.collect_params(model)
             optim = torch.optim.SGD(ps, lr=lr, momentum=0.9)
             return ETA(model, optim, reforward=False, momentum=0.1, e_threshold=e_threshold, d_threshold=d_threshold)
+        case "eta_no_reset":  # [variant]
+            ps, _ = ETANoReset.collect_params(model)
+            optim = torch.optim.SGD(ps, lr=lr, momentum=0.9)
+            return ETANoReset(model, optim, reforward=False, momentum=0.1, e_threshold=e_threshold, d_threshold=d_threshold)
         case "sar":
             ps, _ = SAR.collect_params(model)
             optim = SAM(ps, torch.optim.SGD, rho=0.05, adaptive=False, lr=lr, momentum=0.9)
@@ -176,6 +180,10 @@ def setup_method(method, model, dataset, arch, device):
             ps, _ = SHOT.collect_params(model)
             optim = torch.optim.SGD(ps, lr=lr, momentum=0.9)
             return SHOT(model, optim, reforward=False)
+        case "shot_norm":  # [variant]
+            ps, _ = SHOTNorm.collect_params(model)
+            optim = torch.optim.SGD(ps, lr=lr, momentum=0.9)
+            return SHOTNorm(model, optim, reforward=False, momentum=0.1)
         case "spa":
             lr, projector_lr, projector_dim, m_ratio, n_ratio = get_spa_hyperparameters(arch, model)
             model = FeatureAdapter(arch, model, projector_dim).to(device)
